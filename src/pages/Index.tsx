@@ -1,439 +1,369 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 
 const portals = [
-  {
-    id: 1,
-    title: 'Главный сайт',
-    description: 'Центр грозы',
-    tag: 'ГЛАВНАЯ',
-    icon: 'Home',
-    url: 'https://thunder-mobile-site--preview.poehali.dev/',
-  },
-  {
-    id: 2,
-    title: 'Форум Грозы',
-    description: 'Голос стихии',
-    tag: 'ФОРУМ',
-    icon: 'MessageSquare',
-    url: 'https://storm-forum-orange--preview.poehali.dev/',
-  },
-  {
-    id: 3,
-    title: 'Социальная Гроза',
-    description: 'Вместе в шторм',
-    tag: 'СОЦСЕТЬ',
-    icon: 'Users',
-    url: 'https://social-storm-platform-1--preview.poehali.dev/',
-  },
-  {
-    id: 4,
-    title: 'Таблица Грозы',
-    description: 'Сила в цифрах',
-    tag: 'РЕЙТИНГ',
-    icon: 'BarChart2',
-    url: 'https://storm-table-mobile--preview.poehali.dev/',
-  },
+  { id: 1, title: 'Главный сайт', desc: 'Центр грозы', tag: 'ГЛАВНАЯ', icon: 'Home', url: 'https://thunder-mobile-site--preview.poehali.dev/' },
+  { id: 2, title: 'Форум Грозы', desc: 'Голос стихии', tag: 'ФОРУМ', icon: 'MessageSquare', url: 'https://storm-forum-orange--preview.poehali.dev/' },
+  { id: 3, title: 'Социальная Гроза', desc: 'Вместе в шторм', tag: 'СОЦСЕТЬ', icon: 'Users', url: 'https://social-storm-platform-1--preview.poehali.dev/' },
+  { id: 4, title: 'Таблица Грозы', desc: 'Сила в цифрах', tag: 'РЕЙТИНГ', icon: 'BarChart2', url: 'https://storm-table-mobile--preview.poehali.dev/' },
 ];
 
-function useParticles(canvasRef: React.RefObject<HTMLCanvasElement>) {
+type Particle = { x: number; y: number; vx: number; vy: number; size: number; alpha: number; decay: number; type: 'ember' | 'spark' };
+
+function StormCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     let animId: number;
-    const particles: { x: number; y: number; vx: number; vy: number; size: number; alpha: number; decay: number }[] = [];
+    const particles: Particle[] = [];
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
     resize();
     window.addEventListener('resize', resize);
 
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -Math.random() * 0.5 - 0.1,
-        size: Math.random() * 1.5 + 0.3,
-        alpha: Math.random() * 0.6 + 0.1,
-        decay: Math.random() * 0.003 + 0.001,
-      });
+    const spawn = (): Particle => ({
+      x: Math.random() * window.innerWidth,
+      y: window.innerHeight + 5,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: -(Math.random() * 1.2 + 0.4),
+      size: Math.random() * 2 + 0.3,
+      alpha: Math.random() * 0.7 + 0.2,
+      decay: Math.random() * 0.006 + 0.002,
+      type: Math.random() > 0.7 ? 'spark' : 'ember',
+    });
+
+    for (let i = 0; i < 80; i++) {
+      const p = spawn();
+      p.y = Math.random() * window.innerHeight;
+      particles.push(p);
     }
 
-    const animate = () => {
+    const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach((p, i) => {
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
         p.alpha -= p.decay;
-        if (p.alpha <= 0 || p.y < -10) {
-          particles[i] = {
-            x: Math.random() * canvas.width,
-            y: canvas.height + 10,
-            vx: (Math.random() - 0.5) * 0.3,
-            vy: -Math.random() * 0.5 - 0.1,
-            size: Math.random() * 1.5 + 0.3,
-            alpha: Math.random() * 0.5 + 0.2,
-            decay: Math.random() * 0.003 + 0.001,
-          };
-        }
+        if (p.alpha <= 0 || p.y < -10) { particles[i] = spawn(); continue; }
+
         ctx.save();
         ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = '#ff6400';
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = '#ff6400';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        if (p.type === 'spark') {
+          ctx.strokeStyle = '#ffaa44';
+          ctx.lineWidth = p.size * 0.5;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = '#ff6400';
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(p.x - p.vx * 6, p.y - p.vy * 6);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = p.alpha > 0.5 ? '#ff8c00' : '#ff4400';
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#ff6400';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
-      });
-      animId = requestAnimationFrame(animate);
+      }
+      animId = requestAnimationFrame(draw);
     };
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-    };
+    draw();
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
   }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" />;
 }
 
-function useLightning() {
-  const [flashes, setFlashes] = useState<number[]>([]);
-  useEffect(() => {
-    const fire = () => {
-      const id = Date.now();
-      setFlashes(f => [...f, id]);
-      setTimeout(() => setFlashes(f => f.filter(x => x !== id)), 300);
-      setTimeout(fire, 3000 + Math.random() * 5000);
-    };
-    const t = setTimeout(fire, 1500);
-    return () => clearTimeout(t);
-  }, []);
-  return flashes.length > 0;
-}
-
-const lightningPaths = [
-  'M 50 0 L 20 180 L 45 180 L 10 400 L 40 400 L 0 700',
-  'M 30 0 L 55 150 L 30 150 L 60 320 L 35 320 L 70 600',
-  'M 60 0 L 25 200 L 50 200 L 15 420 L 45 420 L 5 700',
-];
-
-export default function Index() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useParticles(canvasRef);
-  const isFlashing = useLightning();
+function LightningBolt({ x, side, delay, duration }: { x: string; side: 'left' | 'right'; delay: number; duration: number }) {
+  const id = `lb_${x}_${delay}`.replace(/[%.]/g, '_');
+  const pts = side === 'left'
+    ? 'M40,0 L15,150 L38,148 L5,340 L32,338 L0,560 L28,558 L8,750'
+    : 'M20,0 L48,140 L22,138 L55,320 L28,318 L58,520 L30,518 L50,750';
 
   return (
-    <div className="min-h-screen bg-[#050505] overflow-hidden relative font-rubik select-none">
+    <svg
+      className="absolute top-0 pointer-events-none z-0"
+      style={{ [side]: x, height: '100vh', width: '70px', animation: `lightning ${duration}s ease-in-out ${delay}s infinite`, opacity: 0 }}
+      viewBox="0 0 70 750" preserveAspectRatio="none"
+    >
+      <defs>
+        <filter id={`f1_${id}`}><feGaussianBlur stdDeviation="6" result="b" /><feMerge><feMergeNode in="b" /></feMerge></filter>
+        <filter id={`f2_${id}`}><feGaussianBlur stdDeviation="2" result="b" /><feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+      </defs>
+      <path d={pts} stroke="rgba(255,120,0,0.5)" strokeWidth="18" fill="none" filter={`url(#f1_${id})`} />
+      <path d={pts} stroke="rgba(255,160,0,0.6)" strokeWidth="6" fill="none" filter={`url(#f1_${id})`} />
+      <path d={pts} stroke="#ffaa00" strokeWidth="2" fill="none" filter={`url(#f2_${id})`} />
+      <path d={pts} stroke="rgba(255,255,240,0.95)" strokeWidth="0.8" fill="none" />
+    </svg>
+  );
+}
 
-      {/* Canvas частицы */}
-      <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-0" />
+function useFlash() {
+  const [flash, setFlash] = useState(0);
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const fire = () => {
+      setFlash(f => f + 1);
+      setTimeout(() => setFlash(f => f - 1), 80);
+      setTimeout(() => { setFlash(f => f + 1); setTimeout(() => setFlash(f => f - 1), 60); }, 150);
+      t = setTimeout(fire, 4000 + Math.random() * 6000);
+    };
+    t = setTimeout(fire, 2000);
+    return () => clearTimeout(t);
+  }, []);
+  return flash > 0;
+}
 
-      {/* Вспышка молнии по всему экрану */}
-      {isFlashing && (
+function PortalCard({ portal, idx }: { portal: typeof portals[0]; idx: number }) {
+  const [pressed, setPressed] = useState(false);
+
+  return (
+    <a
+      href={portal.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="block animate-fade-in"
+      style={{ animationDelay: `${0.25 + idx * 0.1}s`, opacity: 0 }}
+      onTouchStart={() => setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+    >
+      <div
+        className="relative overflow-hidden rounded-2xl transition-all duration-200"
+        style={{
+          background: pressed
+            ? 'linear-gradient(135deg, #1a0a00 0%, #140800 100%)'
+            : 'linear-gradient(135deg, #0d0d0d 0%, #111 100%)',
+          border: pressed ? '1px solid rgba(255,120,0,0.7)' : '1px solid rgba(255,255,255,0.06)',
+          boxShadow: pressed
+            ? '0 0 0 1px rgba(255,100,0,0.15) inset, 0 8px 40px rgba(255,100,0,0.35), 0 0 60px rgba(255,100,0,0.15)'
+            : '0 2px 20px rgba(0,0,0,0.5)',
+          transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        }}
+      >
+        {/* Верхняя линия */}
         <div
-          className="absolute inset-0 z-10 pointer-events-none"
-          style={{ background: 'rgba(255, 120, 0, 0.04)', transition: 'opacity 0.1s' }}
-        />
-      )}
-
-      {/* Горизонтальные сканлайны */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0 opacity-[0.025]"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,100,0,1) 2px, rgba(255,100,0,1) 3px)',
-          backgroundSize: '100% 4px',
-        }}
-      />
-
-      {/* Сетка */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none z-0"
-        style={{
-          backgroundImage: `linear-gradient(rgba(255,100,0,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,100,0,1) 1px, transparent 1px)`,
-          backgroundSize: '80px 80px',
-        }}
-      />
-
-      {/* Большое радиальное свечение снизу */}
-      <div
-        className="absolute bottom-[-200px] left-1/2 -translate-x-1/2 w-[1200px] h-[600px] pointer-events-none z-0"
-        style={{
-          background: 'radial-gradient(ellipse, rgba(255,100,0,0.12) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-        }}
-      />
-
-      {/* Малое свечение у заголовка */}
-      <div
-        className="absolute top-[30%] left-1/2 -translate-x-1/2 w-[600px] h-[300px] pointer-events-none z-0"
-        style={{
-          background: 'radial-gradient(ellipse, rgba(255,100,0,0.08) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-        }}
-      />
-
-      {/* SVG молнии по бокам */}
-      {[0, 1, 2].map((i) => (
-        <svg
-          key={i}
-          className="absolute top-0 pointer-events-none z-0"
+          className="h-[2px] w-full transition-all duration-300"
           style={{
-            left: i === 0 ? '8%' : i === 1 ? 'auto' : '22%',
-            right: i === 1 ? '10%' : 'auto',
-            height: '100vh',
-            width: '80px',
-            animation: `lightning ${5 + i * 1.7}s ease-in-out ${i * 2.1}s infinite`,
-            opacity: 0,
+            background: pressed
+              ? 'linear-gradient(90deg, #ff6400, #ffcc00, #ff6400)'
+              : 'linear-gradient(90deg, rgba(255,100,0,0.2), rgba(255,100,0,0.05))',
           }}
-          viewBox="0 0 80 700"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <filter id={`lg${i}`}>
-              <feGaussianBlur stdDeviation="3" result="b" />
-              <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id={`lg${i}b`}>
-              <feGaussianBlur stdDeviation="8" result="b" />
-              <feMerge><feMergeNode in="b" /></feMerge>
-            </filter>
-          </defs>
-          {/* Ореол */}
-          <path d={lightningPaths[i]} stroke="rgba(255,140,0,0.3)" strokeWidth="12" fill="none" filter={`url(#lg${i}b)`} />
-          {/* Основная линия */}
-          <path d={lightningPaths[i]} stroke="#ff8c00" strokeWidth="1.5" fill="none" filter={`url(#lg${i})`} />
-          {/* Белый центр */}
-          <path d={lightningPaths[i]} stroke="rgba(255,255,220,0.9)" strokeWidth="0.5" fill="none" />
-        </svg>
-      ))}
+        />
 
-      {/* КОНТЕНТ */}
-      <div className="relative z-20 flex flex-col items-center justify-center min-h-screen px-4 py-12">
-
-        {/* Бейдж сверху */}
+        {/* Угловое свечение */}
         <div
-          className="mb-8 animate-fade-in"
-          style={{ animationDelay: '0s', opacity: 0 }}
-        >
+          className="absolute top-0 left-0 w-40 h-40 pointer-events-none transition-opacity duration-300"
+          style={{
+            background: 'radial-gradient(circle at top left, rgba(255,100,0,0.12) 0%, transparent 65%)',
+            opacity: pressed ? 1 : 0,
+          }}
+        />
+
+        <div className="flex items-center gap-4 p-4 sm:p-5">
+          {/* Иконка-блок */}
           <div
-            className="px-4 py-1.5 rounded-full text-[10px] font-oswald tracking-[0.4em] uppercase"
+            className="relative flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-200"
             style={{
-              background: 'rgba(255,100,0,0.08)',
-              border: '1px solid rgba(255,100,0,0.3)',
-              color: '#ff6400',
-              boxShadow: '0 0 20px rgba(255,100,0,0.1)',
+              background: pressed ? 'rgba(255,100,0,0.2)' : 'rgba(255,100,0,0.07)',
+              border: pressed ? '1px solid rgba(255,100,0,0.6)' : '1px solid rgba(255,100,0,0.15)',
+              boxShadow: pressed ? '0 0 20px rgba(255,100,0,0.3)' : 'none',
             }}
           >
-            ⚡ ПОРТАЛ СТИХИИ ⚡
+            <Icon name={portal.icon} size={24} className="text-[#ff6400]" fallback="Zap" />
+            {/* Пульсирующая точка */}
+            <div
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+              style={{ background: '#ff6400', boxShadow: '0 0 6px #ff6400', animation: `pulse-dot ${2 + idx * 0.4}s ease-in-out infinite` }}
+            />
+          </div>
+
+          {/* Текст */}
+          <div className="flex-1 min-w-0">
+            <div
+              className="text-[10px] font-oswald tracking-[0.3em] mb-1 transition-colors duration-200"
+              style={{ color: pressed ? '#ffaa44' : '#ff6400', opacity: pressed ? 1 : 0.7 }}
+            >
+              {portal.tag}
+            </div>
+            <div
+              className="font-oswald text-lg sm:text-xl font-bold leading-tight transition-colors duration-200"
+              style={{ color: pressed ? '#ff8c00' : '#ffffff' }}
+            >
+              {portal.title}
+            </div>
+            <div className="text-[11px] text-[#444] font-rubik tracking-widest uppercase mt-0.5">
+              {portal.desc}
+            </div>
+          </div>
+
+          {/* Стрелка */}
+          <div
+            className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200"
+            style={{
+              background: pressed ? 'rgba(255,100,0,0.25)' : 'rgba(255,100,0,0.05)',
+              border: pressed ? '1px solid rgba(255,100,0,0.5)' : '1px solid rgba(255,100,0,0.1)',
+              transform: pressed ? 'translateX(2px)' : 'translateX(0)',
+            }}
+          >
+            <Icon name="ArrowRight" size={14} className="text-[#ff6400]" />
           </div>
         </div>
 
-        {/* MEGA заголовок */}
-        <div
-          className="text-center mb-2 animate-fade-in relative"
-          style={{ animationDelay: '0.08s', opacity: 0 }}
-        >
-          {/* Тень-дубликат для объёма */}
-          <div
-            aria-hidden
-            className="absolute inset-0 font-oswald font-bold text-center leading-none pointer-events-none"
-            style={{
-              fontSize: 'clamp(64px, 15vw, 130px)',
-              color: 'transparent',
-              WebkitTextStroke: '1px rgba(255,100,0,0.15)',
-              transform: 'translate(3px, 3px)',
-              letterSpacing: '-0.02em',
-            }}
-          >
+        {/* Нижняя шина */}
+        <div className="mx-4 mb-3 h-px" style={{ background: 'rgba(255,100,0,0.06)' }} />
+        <div className="flex items-center justify-between px-4 pb-3">
+          <div className="flex gap-1">
+            {[0,1,2].map(d => (
+              <div key={d} className="w-1 h-1 rounded-full" style={{ background: '#ff6400', opacity: pressed ? 0.8 : 0.2, animationDelay: `${d * 0.2}s` }} />
+            ))}
+          </div>
+          <span className="font-oswald text-[22px] font-bold" style={{ color: 'rgba(255,100,0,0.06)' }}>
+            {String(portal.id).padStart(2, '0')}
+          </span>
+        </div>
+      </div>
+    </a>
+  );
+}
+
+export default function Index() {
+  const isFlashing = useFlash();
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => x + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div
+      className="min-h-screen overflow-hidden relative font-rubik"
+      style={{ background: '#050505', WebkitTapHighlightColor: 'transparent' }}
+    >
+      {/* Частицы */}
+      <StormCanvas />
+
+      {/* Экранная вспышка */}
+      <div
+        className="absolute inset-0 pointer-events-none z-10 transition-opacity duration-75"
+        style={{ background: 'rgba(255,110,0,0.055)', opacity: isFlashing ? 1 : 0 }}
+      />
+
+      {/* Сканлайны */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.018]"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(255,100,0,1) 3px,rgba(255,100,0,1) 4px)' }}
+      />
+
+      {/* Тонкая сетка */}
+      <div
+        className="absolute inset-0 pointer-events-none z-0 opacity-[0.025]"
+        style={{ backgroundImage: 'linear-gradient(rgba(255,100,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,100,0,1) 1px,transparent 1px)', backgroundSize: '70px 70px' }}
+      />
+
+      {/* Радиальный свет снизу */}
+      <div className="absolute bottom-0 left-0 right-0 h-[50vh] pointer-events-none z-0"
+        style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(255,80,0,0.13) 0%, transparent 70%)', filter: 'blur(30px)' }} />
+
+      {/* Радиальный свет у заголовка */}
+      <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none z-0"
+        style={{ background: 'radial-gradient(ellipse, rgba(255,100,0,0.07) 0%, transparent 70%)', filter: 'blur(50px)' }} />
+
+      {/* Молнии */}
+      <LightningBolt x="5%" side="left" delay={0} duration={7} />
+      <LightningBolt x="20%" side="left" delay={3.5} duration={5.5} />
+      <LightningBolt x="8%" side="right" delay={1.8} duration={6.5} />
+
+      {/* КОНТЕНТ */}
+      <div className="relative z-20 flex flex-col items-center min-h-screen px-4 pt-10 pb-8 sm:justify-center sm:py-12">
+
+        {/* Верхний статус-бар */}
+        <div className="w-full max-w-sm flex items-center justify-between mb-8 animate-fade-in" style={{ animationDelay: '0s', opacity: 0 }}>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-[#ff6400]" style={{ animation: 'pulse-dot 1.5s ease-in-out infinite', boxShadow: '0 0 8px #ff6400' }} />
+            <span className="text-[9px] font-oswald tracking-[0.35em] text-[#ff6400] uppercase">Активно</span>
+          </div>
+          <div className="text-[9px] font-oswald tracking-[0.25em] text-[#333] uppercase">
+            {tick % 2 === 0 ? '⚡ ONLINE' : '⚡ ONLINE'}
+          </div>
+        </div>
+
+        {/* Главный заголовок */}
+        <div className="text-center mb-1 animate-fade-in relative" style={{ animationDelay: '0.07s', opacity: 0 }}>
+          {/* Эхо-тень */}
+          <div aria-hidden className="absolute inset-0 font-oswald font-black text-center pointer-events-none"
+            style={{ fontSize: 'clamp(58px, 22vw, 120px)', letterSpacing: '-0.03em', lineHeight: 0.88,
+              color: 'transparent', WebkitTextStroke: '1px rgba(255,80,0,0.1)', transform: 'translate(4px,4px)' }}>
             МНОГО<br />ГРОЗЫ
           </div>
 
-          <h1
-            className="font-oswald font-bold leading-none relative"
-            style={{
-              fontSize: 'clamp(64px, 15vw, 130px)',
-              letterSpacing: '-0.02em',
-              lineHeight: 0.9,
-            }}
-          >
-            <span
-              style={{
-                display: 'block',
-                color: '#ffffff',
-                textShadow: '0 0 80px rgba(255,100,0,0.2)',
-              }}
-            >
-              МНОГО
-            </span>
-            <span
-              style={{
-                display: 'block',
-                background: 'linear-gradient(135deg, #ff6400 0%, #ff9a00 40%, #ff6400 70%, #e05000 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                filter: 'drop-shadow(0 0 30px rgba(255,100,0,0.6)) drop-shadow(0 0 60px rgba(255,100,0,0.3))',
-              }}
-            >
-              ГРОЗЫ
-            </span>
+          <h1 className="font-oswald font-black relative" style={{ fontSize: 'clamp(58px, 22vw, 120px)', letterSpacing: '-0.03em', lineHeight: 0.88 }}>
+            <span className="block" style={{ color: '#fff', textShadow: '0 0 60px rgba(255,100,0,0.15)' }}>МНОГО</span>
+            <span className="block" style={{
+              background: 'linear-gradient(135deg, #ff5500 0%, #ffaa00 35%, #ff7700 65%, #dd4400 100%)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 25px rgba(255,100,0,0.7)) drop-shadow(0 0 50px rgba(255,80,0,0.4))',
+            }}>ГРОЗЫ</span>
           </h1>
         </div>
 
-        {/* Горизонтальная линия с искрой */}
-        <div
-          className="w-full max-w-sm mb-10 animate-fade-in relative"
-          style={{ animationDelay: '0.15s', opacity: 0 }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent to-[#ff6400]/40" />
-            <span className="text-[#ff6400] text-base animate-float">⚡</span>
-            <div className="flex-1 h-px bg-gradient-to-l from-transparent to-[#ff6400]/40" />
+        {/* Подзаголовок с разделителем */}
+        <div className="w-full max-w-xs mb-8 animate-fade-in" style={{ animationDelay: '0.14s', opacity: 0 }}>
+          <div className="flex items-center gap-3 my-4">
+            <div className="flex-1 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(255,100,0,0.5))' }} />
+            <span className="text-[#ff6400] text-sm" style={{ filter: 'drop-shadow(0 0 6px #ff6400)', animation: 'float 3s ease-in-out infinite' }}>⚡</span>
+            <div className="flex-1 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(255,100,0,0.5))' }} />
           </div>
-          <p className="text-center text-[#555] text-[10px] tracking-[0.45em] uppercase font-rubik mt-3">
-            выбери свой портал
+          <p className="text-center text-[9px] tracking-[0.5em] uppercase font-oswald" style={{ color: '#444' }}>
+            портал стихии
           </p>
         </div>
 
-        {/* КАРТОЧКИ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-          {portals.map((portal, idx) => (
-            <a
-              key={portal.id}
-              href={portal.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group animate-fade-in block"
-              style={{ animationDelay: `${0.2 + idx * 0.1}s`, opacity: 0 }}
-            >
-              <div
-                className="relative overflow-hidden rounded-2xl transition-all duration-400"
-                style={{
-                  background: 'linear-gradient(135deg, #0e0e0e 0%, #111 100%)',
-                  border: '1px solid rgba(255,255,255,0.05)',
-                  transition: 'all 0.35s ease',
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.border = '1px solid rgba(255,100,0,0.5)';
-                  el.style.boxShadow = '0 0 0 1px rgba(255,100,0,0.1) inset, 0 20px 60px rgba(255,100,0,0.2), 0 0 80px rgba(255,100,0,0.08)';
-                  el.style.transform = 'translateY(-3px) scale(1.01)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget as HTMLElement;
-                  el.style.border = '1px solid rgba(255,255,255,0.05)';
-                  el.style.boxShadow = 'none';
-                  el.style.transform = 'translateY(0) scale(1)';
-                }}
-              >
-                {/* Угловой градиент-свет */}
-                <div
-                  className="absolute top-0 left-0 w-32 h-32 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{
-                    background: 'radial-gradient(circle at top left, rgba(255,100,0,0.12) 0%, transparent 70%)',
-                  }}
-                />
+        {/* Карточки */}
+        <div className="w-full max-w-sm space-y-3">
+          {portals.map((p, i) => <PortalCard key={p.id} portal={p} idx={i} />)}
+        </div>
 
-                {/* Нижний градиент */}
-                <div
-                  className="absolute bottom-0 inset-x-0 h-16 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(to top, rgba(255,100,0,0.04), transparent)',
-                  }}
-                />
-
-                {/* Верхняя линия-заполнение */}
-                <div
-                  className="absolute top-0 left-0 h-[2px] w-0 group-hover:w-full transition-all duration-600"
-                  style={{
-                    background: 'linear-gradient(90deg, #ff6400, #ffaa00, #ff6400)',
-                    transitionDuration: '0.6s',
-                  }}
-                />
-
-                <div className="relative p-6">
-                  {/* Верхняя строка: тег + номер */}
-                  <div className="flex items-center justify-between mb-5">
-                    <span
-                      className="text-[9px] font-oswald tracking-[0.35em] px-2 py-1 rounded"
-                      style={{
-                        background: 'rgba(255,100,0,0.1)',
-                        color: '#ff6400',
-                        border: '1px solid rgba(255,100,0,0.2)',
-                      }}
-                    >
-                      {portal.tag}
-                    </span>
-                    <span
-                      className="font-oswald text-[28px] font-bold leading-none"
-                      style={{ color: 'rgba(255,100,0,0.08)' }}
-                    >
-                      {String(portal.id).padStart(2, '0')}
-                    </span>
-                  </div>
-
-                  {/* Иконка */}
-                  <div className="mb-4">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300"
-                      style={{
-                        background: 'rgba(255,100,0,0.08)',
-                        border: '1px solid rgba(255,100,0,0.15)',
-                      }}
-                    >
-                      <Icon name={portal.icon} size={22} className="text-[#ff6400]" fallback="Zap" />
-                    </div>
-                  </div>
-
-                  {/* Заголовок */}
-                  <div
-                    className="font-oswald text-[22px] font-bold text-white leading-tight mb-1 transition-colors duration-300 group-hover:text-[#ff8c00]"
-                  >
-                    {portal.title}
-                  </div>
-                  <div className="text-[#444] text-[11px] tracking-[0.25em] uppercase font-rubik mb-5">
-                    {portal.description}
-                  </div>
-
-                  {/* CTA */}
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-[11px] font-rubik tracking-wider text-[#ff6400] opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-[-10px] group-hover:translate-x-0"
-                    >
-                      Перейти
-                    </span>
-                    <div
-                      className="w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 scale-50 group-hover:scale-100"
-                      style={{ background: 'rgba(255,100,0,0.2)', border: '1px solid rgba(255,100,0,0.4)' }}
-                    >
-                      <Icon name="ArrowUpRight" size={12} className="text-[#ff6400]" />
-                    </div>
-                  </div>
-                </div>
+        {/* Нижний блок */}
+        <div className="mt-8 w-full max-w-sm animate-fade-in" style={{ animationDelay: '0.7s', opacity: 0 }}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,100,0,0.08)' }} />
+            <span className="text-[8px] font-oswald tracking-[0.4em] uppercase" style={{ color: '#222' }}>Много Грозы</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,100,0,0.08)' }} />
+          </div>
+          {/* Мини-сетка статусов */}
+          <div className="grid grid-cols-4 gap-2">
+            {portals.map((p) => (
+              <div key={p.id} className="flex flex-col items-center gap-1 p-2 rounded-xl" style={{ background: 'rgba(255,100,0,0.04)', border: '1px solid rgba(255,100,0,0.07)' }}>
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#ff6400', boxShadow: '0 0 5px #ff6400' }} />
+                <span className="text-[7px] font-oswald tracking-widest uppercase text-center leading-tight" style={{ color: '#333' }}>{p.tag}</span>
               </div>
-            </a>
-          ))}
-        </div>
-
-        {/* Футер */}
-        <div
-          className="mt-14 flex items-center gap-4 animate-fade-in"
-          style={{ animationDelay: '0.7s', opacity: 0 }}
-        >
-          <div className="h-px w-12 bg-gradient-to-r from-transparent to-[#1f1f1f]" />
-          <p className="text-[#222] text-[10px] tracking-[0.3em] uppercase font-oswald">
-            Много Грозы © 2024
-          </p>
-          <div className="h-px w-12 bg-gradient-to-l from-transparent to-[#1f1f1f]" />
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Глобальные keyframes */}
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.7); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+      `}</style>
     </div>
   );
 }
