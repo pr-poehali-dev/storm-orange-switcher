@@ -83,35 +83,37 @@ export default {
 					to: { height: '0' }
 				},
 				'fade-in': {
-					from: { opacity: '0', transform: 'translateY(24px)' },
+					from: { opacity: '0', transform: 'translateY(28px)' },
 					to: { opacity: '1', transform: 'translateY(0)' }
 				},
 				'lightning': {
-					'0%, 85%, 100%': { opacity: '0' },
-					'87%, 93%': { opacity: '1' },
-					'90%': { opacity: '0.2' },
+					'0%, 80%, 100%': { opacity: '0' },
+					'82%, 88%': { opacity: '1' },
+					'85%': { opacity: '0.15' },
+					'90%': { opacity: '0.8' },
+					'92%': { opacity: '0' },
 				},
 				'float': {
 					'0%, 100%': { transform: 'translateY(0px)' },
-					'50%': { transform: 'translateY(-8px)' },
+					'50%': { transform: 'translateY(-7px)' },
 				},
 				'pulse-orange': {
 					'0%, 100%': { boxShadow: '0 0 20px rgba(255, 100, 0, 0.3)' },
 					'50%': { boxShadow: '0 0 50px rgba(255, 100, 0, 0.8)' },
 				},
-				'scan': {
-					'0%': { transform: 'translateY(-100%)' },
-					'100%': { transform: 'translateY(100vh)' },
+				'ember-rise': {
+					'0%': { transform: 'translateY(0) scale(1)', opacity: '0.8' },
+					'100%': { transform: 'translateY(-120px) scale(0)', opacity: '0' },
 				},
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
-				'fade-in': 'fade-in 0.7s ease-out forwards',
-				'lightning': 'lightning 6s ease-in-out infinite',
-				'float': 'float 3s ease-in-out infinite',
+				'fade-in': 'fade-in 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+				'lightning': 'lightning 7s ease-in-out infinite',
+				'float': 'float 3.5s ease-in-out infinite',
 				'pulse-orange': 'pulse-orange 2.5s ease-in-out infinite',
-				'scan': 'scan 8s linear infinite',
+				'ember-rise': 'ember-rise 2s ease-out infinite',
 			}
 		}
 	},
